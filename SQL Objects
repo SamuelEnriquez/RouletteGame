@@ -1,1 +1,443 @@
 
+USE [master]
+GO
+/****** Object:  Database [RouletteGameDb]    Script Date: 17/08/2020 7:34:51 p.m. ******/
+CREATE DATABASE [RouletteGameDb]
+ CONTAINMENT = NONE
+ ON  PRIMARY 
+( NAME = N'RouletteGameDb', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL11.SQLEXPRESS\MSSQL\DATA\RouletteGameDb.mdf' , SIZE = 5120KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+ LOG ON 
+( NAME = N'RouletteGameDb_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL11.SQLEXPRESS\MSSQL\DATA\RouletteGameDb_log.ldf' , SIZE = 2048KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+GO
+ALTER DATABASE [RouletteGameDb] SET COMPATIBILITY_LEVEL = 110
+GO
+IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
+begin
+EXEC [RouletteGameDb].[dbo].[sp_fulltext_database] @action = 'enable'
+end
+GO
+ALTER DATABASE [RouletteGameDb] SET ANSI_NULL_DEFAULT OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET ANSI_NULLS OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET ANSI_PADDING OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET ANSI_WARNINGS OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET ARITHABORT OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET AUTO_CLOSE OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET AUTO_CREATE_STATISTICS ON 
+GO
+ALTER DATABASE [RouletteGameDb] SET AUTO_SHRINK OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET AUTO_UPDATE_STATISTICS ON 
+GO
+ALTER DATABASE [RouletteGameDb] SET CURSOR_CLOSE_ON_COMMIT OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET CURSOR_DEFAULT  GLOBAL 
+GO
+ALTER DATABASE [RouletteGameDb] SET CONCAT_NULL_YIELDS_NULL OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET NUMERIC_ROUNDABORT OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET QUOTED_IDENTIFIER OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET RECURSIVE_TRIGGERS OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET  DISABLE_BROKER 
+GO
+ALTER DATABASE [RouletteGameDb] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET DATE_CORRELATION_OPTIMIZATION OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET TRUSTWORTHY OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET ALLOW_SNAPSHOT_ISOLATION OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET PARAMETERIZATION SIMPLE 
+GO
+ALTER DATABASE [RouletteGameDb] SET READ_COMMITTED_SNAPSHOT OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET HONOR_BROKER_PRIORITY OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET RECOVERY SIMPLE 
+GO
+ALTER DATABASE [RouletteGameDb] SET  MULTI_USER 
+GO
+ALTER DATABASE [RouletteGameDb] SET PAGE_VERIFY CHECKSUM  
+GO
+ALTER DATABASE [RouletteGameDb] SET DB_CHAINING OFF 
+GO
+ALTER DATABASE [RouletteGameDb] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
+GO
+ALTER DATABASE [RouletteGameDb] SET TARGET_RECOVERY_TIME = 0 SECONDS 
+GO
+USE [RouletteGameDb]
+GO
+/****** Object:  StoredProcedure [dbo].[USP_CloseRoulette]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_CloseRoulette]
+	-- Add the parameters for the stored procedure here
+@InIdRoulette  int
+AS
+BEGIN
+	
+	UPDATE dbo.TB_Roulettes
+	SET BtStatus = 0
+	WHERE InIdRoulette = @InIdRoulette
+
+	SELECT BT.InIdRoulette,RT.VcRouletteName,InBetPosition,ChBetColor,DcBetValue,BT.InCodPlayer,BP.VcPlayerName
+	FROM dbo.TB_Bets BT (NOLOCK)
+	INNER JOIN dbo.TB_Roulettes RT on BT.InIdRoulette = RT.InIdRoulette
+	INNER JOIN dbo.TB_BetPlayers BP ON BP.InCodPlayer = BT.InCodPlayer
+	WHERE BT.InIdRoulette = @InIdRoulette
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_CreateRoulette]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_CreateRoulette]
+	-- Add the parameters for the stored procedure here
+@VcRouletteName varchar(50)
+AS
+BEGIN
+	
+	INSERT INTO dbo.TB_Roulettes (VcRouletteName,BtStatus)
+	VALUES (@VcRouletteName,0)
+
+	SELECT SCOPE_IDENTITY() as InIdRoulette
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_GetAllRoulettes]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_GetAllRoulettes]
+AS
+BEGIN
+	
+	SELECT InIdRoulette,VcRouletteName,BtStatus
+	FROM dbo.TB_Roulettes
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_GetAllRoulettesPositions]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_GetAllRoulettesPositions]
+AS
+BEGIN
+	
+	SELECT InIdRoulettePosition,InNumberPosition,VcColorPosition
+	FROM dbo.TB_RoulettePositions
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_NewBet]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_NewBet]
+	-- Add the parameters for the stored procedure here
+@InIdRoulette  int,
+@InBetPosition int = null,
+@ChBetColor char(1) = null,
+@DcBetValue numeric(18,2),
+@InCodPlayer int
+AS
+BEGIN
+	
+	INSERT INTO dbo.TB_Bets (InIdRoulette,InBetPosition,ChBetColor,DcBetValue,InCodPlayer)
+	VALUES (@InIdRoulette,@InBetPosition,@ChBetColor,@DcBetValue,@InCodPlayer)
+
+	
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_OpeningRoulette]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_OpeningRoulette]
+	-- Add the parameters for the stored procedure here
+@InIdRoulette  int
+AS
+BEGIN
+	
+	UPDATE dbo.TB_Roulettes
+	SET BtStatus = 1
+	WHERE InIdRoulette = @InIdRoulette ;
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_UpdatePlayerCredit]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_UpdatePlayerCredit]
+	-- Add the parameters for the stored procedure here
+@DcCredit int,
+@InCodPlayer int
+AS
+BEGIN
+
+	UPDATE  dbo.TB_BetPlayers
+	SET DcCredit = @DcCredit
+	WHERE InCodPlayer = @InCodPlayer ;
+
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[USP_ValidateUser]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[USP_ValidateUser]
+	-- Add the parameters for the stored procedure here
+@InCodPlayer int
+AS
+BEGIN
+	
+	select top 1 InCodPlayer,VcPlayerName,DcCredit
+	FROM dbo.TB_BetPlayers
+	where InCodPlayer = @InCodPlayer
+	
+
+END
+
+GO
+/****** Object:  Table [dbo].[TB_BetPlayers]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[TB_BetPlayers](
+	[InCodPlayer] [int] IDENTITY(1,1) NOT NULL,
+	[VcPlayerName] [varchar](50) NOT NULL,
+	[DcCredit] [numeric](18, 2) NOT NULL,
+ CONSTRAINT [PK_TB_BetPlayers] PRIMARY KEY CLUSTERED 
+(
+	[InCodPlayer] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[TB_Bets]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[TB_Bets](
+	[InIdBet] [int] IDENTITY(1,1) NOT NULL,
+	[InIdRoulette] [int] NOT NULL,
+	[InBetPosition] [int] NULL,
+	[ChBetColor] [char](1) NULL,
+	[DcBetValue] [numeric](18, 2) NOT NULL,
+	[InCodPlayer] [int] NOT NULL,
+ CONSTRAINT [PK_TB_Bets] PRIMARY KEY CLUSTERED 
+(
+	[InIdBet] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[TB_RoulettePositions]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[TB_RoulettePositions](
+	[InIdRoulettePosition] [int] IDENTITY(1,1) NOT NULL,
+	[InNumberPosition] [int] NOT NULL,
+	[VcColorPosition] [char](1) NOT NULL,
+ CONSTRAINT [PK_TB_RoulettePositions] PRIMARY KEY CLUSTERED 
+(
+	[InIdRoulettePosition] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[TB_Roulettes]    Script Date: 17/08/2020 7:34:52 p.m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[TB_Roulettes](
+	[InIdRoulette] [int] IDENTITY(1,1) NOT NULL,
+	[VcRouletteName] [varchar](50) NOT NULL,
+	[BtStatus] [bit] NULL,
+ CONSTRAINT [PK_TB_Roulettes] PRIMARY KEY CLUSTERED 
+(
+	[InIdRoulette] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+SET IDENTITY_INSERT [dbo].[TB_BetPlayers] ON 
+
+GO
+INSERT [dbo].[TB_BetPlayers] ([InCodPlayer], [VcPlayerName], [DcCredit]) VALUES (1, N'samuel', CAST(200000.00 AS Numeric(18, 2)))
+GO
+INSERT [dbo].[TB_BetPlayers] ([InCodPlayer], [VcPlayerName], [DcCredit]) VALUES (2, N'Juan', CAST(8000.00 AS Numeric(18, 2)))
+GO
+SET IDENTITY_INSERT [dbo].[TB_BetPlayers] OFF
+GO
+SET IDENTITY_INSERT [dbo].[TB_Bets] ON 
+
+GO
+INSERT [dbo].[TB_Bets] ([InIdBet], [InIdRoulette], [InBetPosition], [ChBetColor], [DcBetValue], [InCodPlayer]) VALUES (1, 1, 20, NULL, CAST(2000.00 AS Numeric(18, 2)), 1)
+GO
+INSERT [dbo].[TB_Bets] ([InIdBet], [InIdRoulette], [InBetPosition], [ChBetColor], [DcBetValue], [InCodPlayer]) VALUES (2, 1, -1, N'N', CAST(5000.00 AS Numeric(18, 2)), 2)
+GO
+INSERT [dbo].[TB_Bets] ([InIdBet], [InIdRoulette], [InBetPosition], [ChBetColor], [DcBetValue], [InCodPlayer]) VALUES (3, 1, 100, N' ', CAST(20.00 AS Numeric(18, 2)), 1)
+GO
+INSERT [dbo].[TB_Bets] ([InIdBet], [InIdRoulette], [InBetPosition], [ChBetColor], [DcBetValue], [InCodPlayer]) VALUES (4, 4, -1, N'R', CAST(20.00 AS Numeric(18, 2)), 1)
+GO
+SET IDENTITY_INSERT [dbo].[TB_Bets] OFF
+GO
+SET IDENTITY_INSERT [dbo].[TB_RoulettePositions] ON 
+
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (1, 1, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (2, 2, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (3, 3, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (5, 4, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (6, 5, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (7, 6, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (8, 7, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (9, 8, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (10, 9, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (11, 10, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (12, 11, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (13, 12, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (14, 13, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (15, 14, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (16, 15, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (17, 16, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (18, 17, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (19, 18, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (20, 19, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (21, 20, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (22, 21, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (23, 22, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (24, 23, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (25, 24, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (26, 25, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (29, 26, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (30, 27, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (31, 28, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (32, 29, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (33, 30, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (34, 31, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (35, 32, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (36, 33, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (37, 34, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (38, 35, N'N')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (39, 36, N'R')
+GO
+INSERT [dbo].[TB_RoulettePositions] ([InIdRoulettePosition], [InNumberPosition], [VcColorPosition]) VALUES (40, 0, N'R')
+GO
+SET IDENTITY_INSERT [dbo].[TB_RoulettePositions] OFF
+GO
+SET IDENTITY_INSERT [dbo].[TB_Roulettes] ON 
+
+GO
+INSERT [dbo].[TB_Roulettes] ([InIdRoulette], [VcRouletteName], [BtStatus]) VALUES (1, N'Ruleta1', 0)
+GO
+INSERT [dbo].[TB_Roulettes] ([InIdRoulette], [VcRouletteName], [BtStatus]) VALUES (2, N'Ruleta2', 1)
+GO
+INSERT [dbo].[TB_Roulettes] ([InIdRoulette], [VcRouletteName], [BtStatus]) VALUES (3, N'Ruleta3', 1)
+GO
+INSERT [dbo].[TB_Roulettes] ([InIdRoulette], [VcRouletteName], [BtStatus]) VALUES (4, N'Ruleta4', 0)
+GO
+INSERT [dbo].[TB_Roulettes] ([InIdRoulette], [VcRouletteName], [BtStatus]) VALUES (5, N'RULETA NEW 1', 1)
+GO
+INSERT [dbo].[TB_Roulettes] ([InIdRoulette], [VcRouletteName], [BtStatus]) VALUES (6, N'RULETA NEW 2', 1)
+GO
+SET IDENTITY_INSERT [dbo].[TB_Roulettes] OFF
+GO
+USE [master]
+GO
+ALTER DATABASE [RouletteGameDb] SET  READ_WRITE 
+GO
